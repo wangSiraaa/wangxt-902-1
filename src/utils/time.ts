@@ -32,10 +32,13 @@ export const getTimeRemainingMs = (startTime: string | null, durationMinutes: nu
   return Math.max(0, end - Date.now());
 };
 
-export const getConfirmRemainingMs = (joinTime: string, timeoutSeconds: number): number => {
-  const end = new Date(joinTime).getTime() + timeoutSeconds * 1000;
+export const getConfirmRemainingMs = (confirmStartAt: string | null | undefined, timeoutSeconds: number): number => {
+  if (!confirmStartAt || timeoutSeconds <= 0) return 0;
+  const end = new Date(confirmStartAt).getTime() + timeoutSeconds * 1000;
   return Math.max(0, end - Date.now());
 };
+
+export const CONFIRM_TIMEOUT_SECONDS = 60;
 
 export const genId = (): string => {
   return Math.random().toString(36).slice(2, 10) + Date.now().toString(36);

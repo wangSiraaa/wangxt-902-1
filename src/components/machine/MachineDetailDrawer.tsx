@@ -1,6 +1,6 @@
 import { useAppStore } from '../../store';
-import { formatTimeRemaining, getTimeRemainingMs } from '../../utils/time';
-import { X, Play, Square, UserPlus, AlertCircle, Wrench, Shield, Clock, MapPin } from 'lucide-react';
+import { formatTimeRemaining, getTimeRemainingMs, getConfirmRemainingMs, CONFIRM_TIMEOUT_SECONDS } from '../../utils/time';
+import { X, Play, Square, UserPlus, AlertCircle, Wrench, Shield, Clock, MapPin, Timer, AlertTriangle } from 'lucide-react';
 import StatusBadge from './StatusBadge';
 import QueueTimeline from '../queue/QueueTimeline';
 import { useMemo, useState } from 'react';
@@ -67,6 +67,22 @@ export default function MachineDetailDrawer() {
     const q = queues[machine.id] ?? [];
     return q.length > 0 && q[0].userId === currentUser.id;
   }, [machine, currentUser, queues]);
+
+  const firstConfirmInfo = useMemo(() => {
+    if (!machine) return null;
+    const q = queues[machine.id] ?? [];
+    if (q.length === 0) return null;
+    const first = q[0];
+    if (!first.confirmStartAt || first.confirmTimeoutSeconds <= 0) return null;
+    const remainMs = getConfirmRemainingMs(first.confirmStartAt, first.confirmTimeoutSeconds);
+    return {
+      userId: first.userId,
+      remainMs,
+      active: remainMs > 0,
+      totalSeconds: first.confirmTimeoutSeconds,
+      firstUser: users.find(u => u.id === first.userId),
+    };
+  }, [machine, queues, users]);
 
   const [duration, setDuration] = useState(45);
   const isAdmin = currentUser?.role === 'ADMIN';
@@ -151,6 +167,51 @@ export default function MachineDetailDrawer() {
                   </div>
                 </div>
               </div>
+            </section>
+          )}
+
+          {firstConfirmInfo && firstConfirmInfo.active && machine.status === 'IDLE' && (
+            <section className={`glass-card p-5 ${isFirst ? 'status-glow-inuse ring-2 ring-amber-400/60' : 'border-2 border-amber-500/40'}`}>
+              <div className="flex items-start gap-3 mb-3">
+                <div className="h-12 w-12 shrink-0 rounded-xl bg-amber-500/15 flex items-center justify-center animate-pulse">
+                  <Timer size={22} className="text-amber-300" />
+                </div>
+                <div className="flex-1">
+                  <div className="font-semibold text-amber-200 mb-1 flex items-center gap-2">
+                    {isFirst ? '轮到您使用！请尽快确认' : '排队第一人正在确认'}
+                    {!isFirst && firstConfirmInfo.firstUser && (
+                      <span className="text-[11px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-300">
+                        {firstConfirmInfo.firstUser.name} · {firstConfirmInfo.firstUser.roomNumber}
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-xs text-slate-400">
+                    需在 {CONFIRM_TIMEOUT_SECONDS} 秒内点击"确认开始使用"，超时将顺延下一位
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-end gap-3 mb-2">
+                <div className={`font-display text-4xl font-bold tabular-nums ${isFirst ? 'text-amber-300 pulse-num' : 'text-amber-400/80'}`}>
+                  {formatTimeRemaining(firstConfirmInfo.remainMs)}
+                </div>
+                <div className="text-[11px] text-slate-500 pb-1">剩余确认时间</div>
+              </div>
+              <div className="h-2 rounded-full bg-slate-800/80 overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-amber-400 via-orange-500 to-rose-500 transition-all duration-1000"
+                  style={{
+                    width: `${firstConfirmInfo.totalSeconds > 0
+                      ? Math.max(0, Math.min(100, (firstConfirmInfo.remainMs / (firstConfirmInfo.totalSeconds * 1000)) * 100))
+                      : 0}%`,
+                  }}
+                />
+              </div>
+              {!isFirst && (
+                <div className="mt-3 flex items-start gap-2 text-[11px] text-rose-300/80">
+                  <AlertTriangle size={13} className="mt-0.5 shrink-0" />
+                  <span>若第一人超时未确认，系统将自动移除并顺延至下一位用户（含您）</span>
+                </div>
+              )}
             </section>
           )}
 

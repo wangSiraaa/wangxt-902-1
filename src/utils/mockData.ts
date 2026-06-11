@@ -66,12 +66,12 @@ export const QUEUE_ENTRIES: QueueEntry[] = [
   {
     id: genId(), machineId: 'mch_002', userId: 'usr_004', position: 1,
     joinTime: new Date(now - 10 * 60 * 1000).toISOString(),
-    confirmTimeoutSeconds: 0, confirmed: true,
+    confirmTimeoutSeconds: 0, confirmStartAt: null, confirmed: true,
   },
   {
     id: genId(), machineId: 'mch_002', userId: 'usr_005', position: 2,
     joinTime: new Date(now - 5 * 60 * 1000).toISOString(),
-    confirmTimeoutSeconds: 0, confirmed: false,
+    confirmTimeoutSeconds: 0, confirmStartAt: null, confirmed: false,
   },
 ];
 

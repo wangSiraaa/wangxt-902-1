@@ -53,7 +53,9 @@ export interface QueueEntry {
   position: number;
   joinTime: string;
   confirmTimeoutSeconds: number;
+  confirmStartAt: string | null;
   confirmed: boolean;
+  skippedByTimeout?: boolean;
 }
 
 export interface RepairRecord {

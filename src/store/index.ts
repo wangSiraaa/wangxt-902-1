@@ -5,7 +5,7 @@ import type {
   OperationLog, ReminderSettings, UIState, MachineStatus, OperationAction, OperationResult,
 } from '../types';
 import { BUILDINGS, FLOORS, MACHINES, USERS, QUEUE_ENTRIES, REPAIR_RECORDS, DEFAULT_REMINDER } from '../utils/mockData';
-import { genId, getTimeRemainingMs, getConfirmRemainingMs } from '../utils/time';
+import { genId, getTimeRemainingMs, getConfirmRemainingMs, CONFIRM_TIMEOUT_SECONDS } from '../utils/time';
 
 export interface AppState {
   buildings: Building[];
@@ -234,6 +234,7 @@ export const useAppStore = create<AppState>()(
           position: existing.length + 1,
           joinTime: new Date().toISOString(),
           confirmTimeoutSeconds: 0,
+          confirmStartAt: null,
           confirmed: false,
         };
         set({ queues: { ...get().queues, [machineId]: [...existing, newEntry] } });
@@ -249,10 +250,23 @@ export const useAppStore = create<AppState>()(
           get().addOperationLog({ operatorId: userId, action: 'CANCEL_RESERVE', targetMachineId: machineId, detail: '不在队列中，取消无效', result: 'BLOCKED' });
           return { ok: false, reason: '您不在该机器的预约队列中' };
         }
-        const newQueue = queue.filter(e => e.userId !== userId).map((e, i) => ({ ...e, position: i + 1 }));
+        const machine = get().machines.find(m => m.id === machineId);
+        const removedFirst = idx === 0;
+        let newQueue = queue.filter(e => e.userId !== userId).map((e, i) => ({ ...e, position: i + 1 }));
+        if (removedFirst && machine?.status === 'IDLE' && newQueue.length > 0) {
+          const nextFirst = newQueue[0];
+          newQueue = [
+            { ...nextFirst, confirmTimeoutSeconds: CONFIRM_TIMEOUT_SECONDS, confirmStartAt: new Date().toISOString(), confirmed: false },
+            ...newQueue.slice(1).map(e => ({ ...e, confirmTimeoutSeconds: 0, confirmStartAt: null })),
+          ];
+        }
         set({ queues: { ...get().queues, [machineId]: newQueue } });
         get().addOperationLog({ operatorId: userId, action: 'CANCEL_RESERVE', targetMachineId: machineId, detail: `取消预约，原位置#${idx + 1}`, result: 'SUCCESS' });
         get().showToast('info', '已取消预约，队列位置已释放');
+        if (removedFirst && newQueue.length > 0) {
+          const nextUser = get().getUserById(newQueue[0].userId);
+          get().showToast('info', `${nextUser?.name ?? '下一位用户'} 轮到使用，需在${CONFIRM_TIMEOUT_SECONDS}秒内确认`);
+        }
         return { ok: true };
       },
 
@@ -321,6 +335,21 @@ export const useAppStore = create<AppState>()(
             ...l, endTime: new Date().toISOString(), actualMinutes,
           } : l),
         });
+        const queues = get().queues;
+        const curQueue = queues[machineId] ?? [];
+        if (curQueue.length > 0) {
+          const newFirst = curQueue[0];
+          const activated: QueueEntry = {
+            ...newFirst,
+            confirmTimeoutSeconds: CONFIRM_TIMEOUT_SECONDS,
+            confirmStartAt: new Date().toISOString(),
+            confirmed: false,
+          };
+          const updatedRest = curQueue.slice(1).map(e => ({ ...e, confirmTimeoutSeconds: 0, confirmStartAt: null }));
+          set({ queues: { ...queues, [machineId]: [activated, ...updatedRest] } });
+          const userObj = get().getUserById(newFirst.userId);
+          get().showToast('info', `${userObj?.name ?? '排队第一人'} 轮到使用，请在 ${CONFIRM_TIMEOUT_SECONDS} 秒内确认开始`);
+        }
         get().addOperationLog({ operatorId: userId, action: 'END', targetMachineId: machineId, detail: `结束使用，实际使用${actualMinutes}分钟`, result: 'SUCCESS' });
         get().showToast('success', '机器已释放，回归空闲状态');
         return { ok: true };
@@ -396,18 +425,31 @@ export const useAppStore = create<AppState>()(
         let changed = false;
         const newQueues: Record<string, QueueEntry[]> = { ...queues };
         for (const machine of machines) {
-          if (machine.status !== 'IN_USE') continue;
+          if (machine.status !== 'IDLE') continue;
           const queue = newQueues[machine.id] ?? [];
           if (queue.length === 0) continue;
           const first = queue[0];
-          if (first.confirmTimeoutSeconds > 0 && !first.confirmed) {
-            const remain = getConfirmRemainingMs(first.joinTime, first.confirmTimeoutSeconds);
+          if (first.confirmStartAt && first.confirmTimeoutSeconds > 0 && !first.confirmed) {
+            const remain = getConfirmRemainingMs(first.confirmStartAt, first.confirmTimeoutSeconds);
             if (remain <= 0) {
-              newQueues[machine.id] = queue.slice(1).map((e, i) => ({ ...e, position: i + 1 }));
+              const shiftedOut = { ...first, skippedByTimeout: true };
+              const rest = queue.slice(1);
+              let rebuilt: QueueEntry[] = rest.map((e, i) => ({ ...e, position: i + 1, confirmTimeoutSeconds: 0, confirmStartAt: null }));
+              if (rebuilt.length > 0) {
+                rebuilt = [
+                  { ...rebuilt[0], confirmTimeoutSeconds: CONFIRM_TIMEOUT_SECONDS, confirmStartAt: new Date().toISOString(), confirmed: false },
+                  ...rebuilt.slice(1),
+                ];
+              }
+              newQueues[machine.id] = rebuilt;
               changed = true;
-              addOperationLog({ operatorId: first.userId, action: 'TIMEOUT_SHIFT', targetMachineId: machine.id, detail: '超时未确认，自动顺延', result: 'BLOCKED' });
-              const user = get().getUserById(first.userId);
-              showToast('info', `${user?.name ?? '用户'} 超时未确认使用，已顺延下一位`);
+              addOperationLog({ operatorId: shiftedOut.userId, action: 'TIMEOUT_SHIFT', targetMachineId: machine.id, detail: '队首超时未确认，已顺延下一位', result: 'BLOCKED' });
+              const user = get().getUserById(shiftedOut.userId);
+              showToast('info', `${user?.name ?? '用户'} 超时未确认使用，已顺延至下一位`);
+              if (rebuilt.length > 0) {
+                const next = get().getUserById(rebuilt[0].userId);
+                showToast('info', `${next?.name ?? '下一位用户'} 轮到使用，请在 ${CONFIRM_TIMEOUT_SECONDS} 秒内确认`);
+              }
             }
           }
         }
