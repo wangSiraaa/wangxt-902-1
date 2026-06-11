@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import type {
   Building, Floor, Machine, User, QueueEntry, RepairRecord,
   OperationLog, ReminderSettings, UIState, MachineStatus, OperationAction, OperationResult,
+  PrintListItem,
 } from '../types';
 import { BUILDINGS, FLOORS, MACHINES, USERS, QUEUE_ENTRIES, REPAIR_RECORDS, DEFAULT_REMINDER } from '../utils/mockData';
 import { genId, getTimeRemainingMs, getConfirmRemainingMs, CONFIRM_TIMEOUT_SECONDS } from '../utils/time';
@@ -29,6 +30,12 @@ export interface AppState {
   closeReminderModal: () => void;
   openRepairModal: () => void;
   closeRepairModal: () => void;
+  openPrintPreview: () => void;
+  closePrintPreview: () => void;
+  addToPrintList: (machineId: string) => { ok: boolean; reason?: string };
+  removeFromPrintList: (machineId: string) => { ok: boolean; reason?: string };
+  clearPrintList: () => void;
+  togglePrintListItem: (machineId: string) => { ok: boolean; reason?: string };
   switchCurrentUser: (userId: string) => void;
   setCurrentUser: (userId: string) => void;
   showToast: (type: 'success' | 'error' | 'info', message: string) => void;
@@ -84,6 +91,8 @@ const initialUIState: UIState = {
   showDetailDrawer: false,
   showReminderModal: false,
   showRepairModal: false,
+  showPrintPreview: false,
+  printList: [],
   toasts: [],
 };
 
@@ -120,6 +129,46 @@ export const useAppStore = create<AppState>()(
       closeReminderModal: () => set({ ui: { ...get().ui, showReminderModal: false } }),
       openRepairModal: () => set({ ui: { ...get().ui, showRepairModal: true } }),
       closeRepairModal: () => set({ ui: { ...get().ui, showRepairModal: false } }),
+      openPrintPreview: () => set({ ui: { ...get().ui, showPrintPreview: true } }),
+      closePrintPreview: () => set({ ui: { ...get().ui, showPrintPreview: false } }),
+      addToPrintList: (machineId) => {
+        const machine = get().machines.find(m => m.id === machineId);
+        if (!machine) return { ok: false, reason: '机器不存在' };
+        if (machine.status === 'FAULT') return { ok: false, reason: '故障机器不能加入打印清单' };
+        const existing = get().ui.printList;
+        if (existing.some(p => p.machineId === machineId)) {
+          return { ok: true };
+        }
+        const newItem: PrintListItem = {
+          machineId,
+          addedAt: new Date().toISOString(),
+        };
+        set({ ui: { ...get().ui, printList: [...existing, newItem] } });
+        get().showToast('success', `已将 ${machine.code} 加入打印清单`);
+        return { ok: true };
+      },
+      removeFromPrintList: (machineId) => {
+        const list = get().ui.printList;
+        if (!list.some(p => p.machineId === machineId)) {
+          return { ok: false, reason: '不在打印清单中' };
+        }
+        set({ ui: { ...get().ui, printList: list.filter(p => p.machineId !== machineId) } });
+        const machine = get().machines.find(m => m.id === machineId);
+        get().showToast('info', machine ? `已将 ${machine.code} 移出打印清单` : '已移出打印清单');
+        return { ok: true };
+      },
+      clearPrintList: () => {
+        set({ ui: { ...get().ui, printList: [] } });
+        get().showToast('info', '已清空打印清单');
+      },
+      togglePrintListItem: (machineId) => {
+        const machine = get().machines.find(m => m.id === machineId);
+        if (!machine) return { ok: false, reason: '机器不存在' };
+        if (get().ui.printList.some(p => p.machineId === machineId)) {
+          return get().removeFromPrintList(machineId);
+        }
+        return get().addToPrintList(machineId);
+      },
       switchCurrentUser: (userId) => {
         const user = get().users.find(u => u.id === userId);
         if (!user) return;
@@ -517,6 +566,18 @@ export const useAppStore = create<AppState>()(
         operationLogs: state.operationLogs,
         reminders: state.reminders,
         currentUserId: state.currentUserId,
+        ui: {
+          selectedBuildingId: state.ui.selectedBuildingId,
+          selectedFloorId: state.ui.selectedFloorId,
+          selectedStatusFilter: state.ui.selectedStatusFilter,
+          printList: state.ui.printList,
+          showDetailDrawer: false,
+          showReminderModal: false,
+          showRepairModal: false,
+          showPrintPreview: false,
+          toasts: [],
+          selectedMachineId: null,
+        },
       }),
       onRehydrateStorage: () => (state) => {
         if (state) {

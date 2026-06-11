@@ -1,0 +1,64 @@
+{
+  "seedVersion": "902",
+  "generatedAt": "2026-06-11T00:00:00.000Z",
+  "buildings": [
+    { "id": "bld_1", "name": "1号楼" },
+    { "id": "bld_2", "name": "2号楼" },
+    { "id": "bld_3", "name": "3号楼" }
+  ],
+  "floors": [
+    { "id": "flr_1_1", "buildingId": "bld_1", "floorNumber": 1 },
+    { "id": "flr_1_2", "buildingId": "bld_1", "floorNumber": 2 },
+    { "id": "flr_1_3", "buildingId": "bld_1", "floorNumber": 3 },
+    { "id": "flr_2_1", "buildingId": "bld_2", "floorNumber": 1 },
+    { "id": "flr_2_2", "buildingId": "bld_2", "floorNumber": 2 },
+    { "id": "flr_3_1", "buildingId": "bld_3", "floorNumber": 1 }
+  ],
+  "machines": [
+    { "id": "mch_001", "floorId": "flr_1_1", "code": "1F-A01", "status": "IDLE", "currentUserId": null, "startTime": null, "durationMinutes": 45 },
+    { "id": "mch_002", "floorId": "flr_1_1", "code": "1F-A02", "status": "IN_USE", "currentUserId": "usr_001", "startTime": "2026-06-11T08:30:00.000Z", "durationMinutes": 45 },
+    { "id": "mch_003", "floorId": "flr_1_2", "code": "2F-B01", "status": "IDLE", "currentUserId": null, "startTime": null, "durationMinutes": 45 },
+    { "id": "mch_004", "floorId": "flr_1_2", "code": "2F-B02", "status": "FAULT", "currentUserId": null, "startTime": null, "durationMinutes": 45 },
+    { "id": "mch_005", "floorId": "flr_1_3", "code": "3F-C01", "status": "IN_USE", "currentUserId": "usr_002", "startTime": "2026-06-11T08:15:00.000Z", "durationMinutes": 60 },
+    { "id": "mch_006", "floorId": "flr_2_1", "code": "1F-D01", "status": "IDLE", "currentUserId": null, "startTime": null, "durationMinutes": 45 },
+    { "id": "mch_007", "floorId": "flr_2_1", "code": "1F-D02", "status": "IDLE", "currentUserId": null, "startTime": null, "durationMinutes": 45 },
+    { "id": "mch_008", "floorId": "flr_2_2", "code": "2F-E01", "status": "IN_USE", "currentUserId": "usr_003", "startTime": "2026-06-11T08:45:00.000Z", "durationMinutes": 45 },
+    { "id": "mch_009", "floorId": "flr_3_1", "code": "1F-F01", "status": "IDLE", "currentUserId": null, "startTime": null, "durationMinutes": 45 },
+    { "id": "mch_010", "floorId": "flr_3_1", "code": "1F-F02", "status": "FAULT", "currentUserId": null, "startTime": null, "durationMinutes": 45 }
+  ],
+  "users": [
+    { "id": "usr_001", "name": "张明", "roomNumber": "101", "role": "RESIDENT", "avatar": "张" },
+    { "id": "usr_002", "name": "李华", "roomNumber": "302", "role": "RESIDENT", "avatar": "李" },
+    { "id": "usr_003", "name": "王芳", "roomNumber": "203", "role": "RESIDENT", "avatar": "王" },
+    { "id": "usr_004", "name": "赵强", "roomNumber": "105", "role": "RESIDENT", "avatar": "赵" },
+    { "id": "usr_005", "name": "陈雪", "roomNumber": "207", "role": "RESIDENT", "avatar": "陈" },
+    { "id": "usr_006", "name": "刘佳", "roomNumber": "308", "role": "RESIDENT", "avatar": "刘" },
+    { "id": "usr_admin", "name": "宿舍管理员", "roomNumber": "管理室", "role": "ADMIN", "avatar": "管" }
+  ],
+  "queueEntries": [
+    { "id": "qe_s001", "machineId": "mch_002", "userId": "usr_004", "position": 1, "joinTime": "2026-06-11T08:35:00.000Z", "confirmTimeoutSeconds": 0, "confirmStartAt": null, "confirmed": true },
+    { "id": "qe_s002", "machineId": "mch_002", "userId": "usr_005", "position": 2, "joinTime": "2026-06-11T08:40:00.000Z", "confirmTimeoutSeconds": 0, "confirmStartAt": null, "confirmed": false }
+  ],
+  "repairRecords": [
+    { "id": "rr_s001", "machineId": "mch_004", "reporterId": "usr_001", "description": "洗衣机不脱水，电机有异常响声", "status": "CONFIRMED", "reportTime": "2026-06-11T06:30:00.000Z", "handleTime": "2026-06-11T07:00:00.000Z", "handlerId": "usr_admin" },
+    { "id": "rr_s002", "machineId": "mch_010", "reporterId": "usr_006", "description": "开机后无法进水，显示错误代码E1", "status": "PENDING", "reportTime": "2026-06-11T08:00:00.000Z", "handleTime": null, "handlerId": null }
+  ],
+  "printList": [
+    { "machineId": "mch_001", "addedAt": "2026-06-11T09:00:00.000Z" },
+    { "machineId": "mch_003", "addedAt": "2026-06-11T09:01:00.000Z" },
+    { "machineId": "mch_006", "addedAt": "2026-06-11T09:02:00.000Z" }
+  ],
+  "uiSelected": {
+    "selectedBuildingId": "bld_1",
+    "selectedFloorId": "flr_1_1",
+    "selectedStatusFilter": "ALL"
+  },
+  "businessNumbers": {
+    "printListCount": 3,
+    "faultMachineCodes": ["2F-B02", "1F-F02"],
+    "idleMachineCodes": ["1F-A01", "2F-B01", "1F-D01", "1F-D02", "1F-F01"],
+    "inUseMachineCodes": ["1F-A02", "3F-C01", "2F-E01"],
+    "queueCount": 2,
+    "totalMachines": 10
+  }
+}

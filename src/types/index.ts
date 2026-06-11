@@ -95,6 +95,11 @@ export interface ReminderSettings {
   advanceMinutes: number;
 }
 
+export interface PrintListItem {
+  machineId: string;
+  addedAt: string;
+}
+
 export interface UIState {
   selectedBuildingId: string | null;
   selectedFloorId: string | null;
@@ -103,5 +108,7 @@ export interface UIState {
   showDetailDrawer: boolean;
   showReminderModal: boolean;
   showRepairModal: boolean;
+  showPrintPreview: boolean;
+  printList: PrintListItem[];
   toasts: Array<{ id: string; type: 'success' | 'error' | 'info'; message: string }>;
 }

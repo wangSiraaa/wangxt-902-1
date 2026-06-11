@@ -4,6 +4,7 @@ import { useAppStore } from '../store';
 import FilterBar from '../components/machine/FilterBar';
 import MachineCard from '../components/machine/MachineCard';
 import MachineDetailDrawer from '../components/machine/MachineDetailDrawer';
+import PrintPreview from '../components/machine/PrintPreview';
 import ReminderForm from '../components/forms/ReminderForm';
 import RepairForm from '../components/forms/RepairForm';
 import Header from '../components/layout/Header';
@@ -84,9 +85,11 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen">
-      <Header />
+      <div className="no-print">
+        <Header />
+      </div>
 
-      <main className="max-w-7xl mx-auto px-4 md:px-6 pb-16 pt-6">
+      <main className="max-w-7xl mx-auto px-4 md:px-6 pb-16 pt-6 no-print">
         {myReservation && (
           <div className="mb-6 glass-card p-4 border-amber-400/30 flex items-center gap-4 flex-wrap">
             <div className="h-10 w-10 shrink-0 rounded-xl bg-amber-500/15 flex items-center justify-center text-amber-300 animate-pulse">
@@ -141,6 +144,7 @@ export default function Dashboard() {
       </main>
 
       <MachineDetailDrawer />
+      <PrintPreview />
       <ReminderForm />
       <RepairForm />
     </div>
